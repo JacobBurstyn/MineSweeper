@@ -1,0 +1,211 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using MineSweeperLibrary;
+using Microsoft.VisualBasic;
+using Timer = System.Threading.Timer;
+
+
+namespace WindowsFormsApp1
+{
+    public partial class Form1 : Form
+    {
+        MinesweeperModel game;
+        private Boolean isFirstClick = true;
+        private Button[,] buttons;
+        private int bombs;
+        private int rowCount;
+        private int columnCount;
+        private Random random = new Random();
+        
+        public Form1()
+        {
+            InitializeComponent2(10,10,10);
+            
+        }
+
+        private void InitializeComponent2(int bombs, int rowCount, int columnCount)
+        {
+            this.bombs = bombs;
+            this.rowCount = rowCount;
+            this.columnCount = columnCount;
+            this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
+            this.button1 = new System.Windows.Forms.Button();
+            this.tableLayoutPanel1.SuspendLayout();
+            this.tableLayoutPanel1.CellBorderStyle = TableLayoutPanelCellBorderStyle.Inset;
+            this.timer1 = new System.Windows.Forms.Timer();
+            this.SuspendLayout();
+            // 
+            // tableLayoutPanel1
+            // 
+            this.tableLayoutPanel1.ColumnCount = columnCount;
+
+            for (int i = 0; i < columnCount; i++)
+            {
+                this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100.0f / columnCount));
+            }
+
+            this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
+            this.tableLayoutPanel1.Name = "tableLayoutPanel1";
+
+            this.tableLayoutPanel1.RowCount = rowCount;
+            for (int i = 0; i < rowCount; i++)
+            {
+                this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100.0f /rowCount));
+            }
+
+            buttons = new Button[rowCount, columnCount];
+            Button button;
+            for (int i = 0; i < rowCount; i++)
+            {
+                for (int j = 0; j < columnCount; j++)
+                {
+                    buttons[i, j] = button = new Button();
+                    button.Tag = new Point(i, j);
+                    button.Dock = DockStyle.Fill;
+                    button.Click += button1_Click;
+                    this.tableLayoutPanel1.Controls.Add(button, i, j);
+                }
+            }
+
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(421, 507);
+            this.tableLayoutPanel1.TabIndex = 0;
+            // 
+            // button1
+            // 
+            this.button1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.button1.Location = new System.Drawing.Point(3, 3);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(144, 187);
+            this.button1.TabIndex = 0;
+            this.button1.Text = "button1";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+//
+            this.timer1.Interval = 30000;
+            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
+            // 
+            // Form1
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(421, 507);
+            this.Controls.Add(this.tableLayoutPanel1);
+            this.Name = "Form1";
+            this.Text = "Form1";
+            this.tableLayoutPanel1.ResumeLayout(false);
+            this.ResumeLayout(false);
+        }
+    
+        private void button1_Click(object sender, EventArgs e)
+        {
+            timer1.Start();
+            Point p = (Point)((Button)sender).Tag;
+            if (isFirstClick)
+            {
+                game = new MinesweeperModel(bombs, rowCount, columnCount);
+                game.DropBombs(p.X,p.Y);
+                isFirstClick = false;
+            }
+            
+            game.MakeAMove(p);
+            if (game.state == MinesweeperModel.DEAD)
+            {
+                buttons[p.X, p.Y].Text = "Bomb";
+                timer1.Stop();
+                MessageBox.Show("Game Over \nPress A Square To Play Again");
+                ClearBoard();
+                isFirstClick = true;
+                game.state = MinesweeperModel.ALIVE;
+                return;
+            }
+            
+           
+        
+            
+            for (int i = 0; i < game.board.GetLength(0); i++)
+            {
+                for (int j =0; j < game.board.GetLength(1); j++)
+                {
+                    int revealIfOne = game.newRevealedSquares[i, j];
+                    if (revealIfOne == 1)
+                    {
+                        buttons[i,j].BackColor = Color.Gold;
+                        buttons[i, j].Text = game.board[i, j].ToString();
+                        game.newRevealedSquares[i, j] = 0;
+                    }
+                }
+            }
+            if (game.state == MinesweeperModel.WINNER)
+            {
+                buttons[p.X, p.Y].BackColor = Color.Gold;
+                buttons[p.X, p.Y].Text = game.board[p.X, p.Y].ToString();
+                timer1.Stop();
+                for (int i = 0; i < game.board.GetLength(0); i++)
+                {
+                    for (int j = 0; j < game.board.GetLength(1); j++)
+                    {
+                        if (game.revealedBoard[i,j]==0)
+                        {
+                            buttons[i, j].BackColor = Color.Red;
+                            buttons[i, j].Text = "B";
+                        }
+                    }
+                }
+                MessageBox.Show("ALL MINES CLEARED!!!!! YOU WIN \nPress A Square To Play Again");
+                ClearBoard();
+                isFirstClick = true;
+                game.state = MinesweeperModel.ALIVE;
+                return;
+            }
+        }
+
+        private void ClearBoard()
+        {
+            for (int i = 0; i < game.board.GetLength(0); i++)
+            {
+                for (int j = 0; j < game.board.GetLength(1); j++)
+                {
+                    buttons[i, j].BackColor = DefaultBackColor;
+                    buttons[i, j].Text = "";
+                }
+            }
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            Button b = new Button();
+           
+            
+            while (true)
+            {
+                for (int i = 0; i < game.board.GetLength(0); i++)
+                {
+                    for (int j = 0; j < game.board.GetLength(1); j++)
+                    {
+                        if (game.revealedBoard[i, j] == 0)
+                        {
+                            if (random.Next(100) < 10)
+                            {
+                                b.Tag = new Point(i, j);
+                                
+                                button1_Click(b, e);
+                                goto theEnd;
+                            }
+                        }
+                    }
+                }
+            } theEnd: ;
+
+
+        }
+    }
+}
